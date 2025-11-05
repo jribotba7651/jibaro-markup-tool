@@ -1,0 +1,42 @@
+INSTRUCCIONES PARA RECARGAR LA EXTENSIÓN
+==========================================
+
+IMPORTANTE: Después de hacer cambios al código de la extensión,
+tienes que RECARGAR la extensión en Chrome para que los cambios
+tomen efecto.
+
+PASOS PARA RECARGAR:
+
+1. Abre Chrome
+2. Ve a: chrome://extensions/
+3. Busca "Jibaro Markup Cleaner"
+4. Haz clic en el botón de RELOAD/RECARGAR (símbolo de flecha circular)
+5. Cierra y vuelve a abrir el popup de la extensión
+
+CONFIGURACIÓN CORRECTA PARA TABLAS:
+
+En el popup de la extensión, asegúrate que las opciones estén así:
+
+☑ Remove HTML tags              (MARCADO - sí)
+☐ Remove Markdown                (NO MARCADO - importante!)
+☐ Remove citations               (NO MARCADO)
+☑ Normalize whitespace           (MARCADO - sí)
+☑ Convert tables to gridlines    (MARCADO - sí)
+
+¿POR QUÉ "Remove Markdown" DEBE ESTAR NO MARCADO?
+
+Porque la extensión ahora está diseñada para PRESERVAR el markup
+de Claude (**negrillas**, • bullets, --- separadores) automáticamente.
+Si marcas "Remove Markdown", la extensión intentará remover cosas
+que no queremos que remueva.
+
+PRUEBA:
+
+Después de recargar, copia el contenido de test-table-input.txt,
+pégalo en el popup, y haz clic en "Clean Text".
+
+Deberías ver:
+✓ **Test Section:** (con los **)
+✓ Tabla convertida con caracteres ┌├│└┬┼┴─
+✓ --- (separador preservado)
+✓ • Bullets (preservados)

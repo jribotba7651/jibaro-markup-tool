@@ -1,0 +1,397 @@
+Subject: Progressive FG Creation Model - Master Control Integration Discussion
+
+Anthony,
+
+I'm reaching out to align on a phased material creation workflow that addresses SAP readiness, operational efficiency, and change control requirements. Following discussions with Jonathan and the Canada team, I've mapped out an approach that enables early visibility while maintaining quality gates.
+
+BACKGROUND & BUSINESS CASE:
+
+Current State Challenge:
+- Materials created in a rush after E2D approval (28-day lead time known)
+- All data required upfront creates bottlenecks and delays
+- No system visibility until final approval stage
+- Incomplete data forces rework cycles
+- Late costing analysis limits decision-making
+
+Proposed State:
+- Phased material creation starting post-E2D approval
+- Progressive data enrichment through child tickets
+- Early SAP visibility enables planning and cost modeling
+- Structured gates prevent incomplete materials from going live
+
+Canada operates differently (all-at-once after E2D). Our US reality requires a progressive approach to balance innovation velocity with data quality.
+
+---
+
+DETAILED WORKFLOW:
+
+PHASE 0: E2D APPROVAL COMPLETE
+Trigger: Project approved in innovation process
+Action: Open Master Ticket in Master Control
+
+PHASE 1: MASTER TICKET - FERT CREATION (MINIMAL FIELDS)
+Owner: Master Data (Juan)
+Timing: Day 1 post-E2D approval
+Action: Create material number in SAP with foundational data only
+
+Required Fields:
+- Material Description (standard naming convention validation)
+- Material Type (FERT, HALB, ROH)
+- Base Unit of Measure (EA, MG, KG, CV - case)
+- UPC/GTIN (if available from Marketing)
+- Basic Product Identifiers (flavor, size, format)
+- Material Status: ND (Not Delivered) - blocks all transactions
+
+Deliverable: Material exists in SAP but cannot be transacted
+Benefit: Material number established, costing prep can begin
+
+PHASE 2: CHILD TICKET 1 - GENERIC BOM SETUP
+Owner: Master Data + PD input
+Timing: Parallel to formulation development
+Action: Create placeholder BOM using golden parts
+
+Generic Components Concept:
+- Ash Bulk [generic powder base]
+- Bottle Generic 16oz [standard bottle placeholder]
+- Cap Standard [generic closure]
+- Label Placeholder [dimensioned blank]
+- Case CV [standard shipping case]
+
+Example Generic BOM:
+| Component | Qty | UoM | Notes |
+|-----------|-----|-----|-------|
+| ASH-BULK-GEN | 15 | MG | Powder base placeholder |
+| BTL-16OZ-GEN | 1 | EA | Bottle placeholder |
+| CAP-STD-GEN | 1 | EA | Cap placeholder |
+| LBL-4X6-GEN | 1 | EA | Label placeholder |
+| CASE-STD-CV | 1 | CV | Shipping case |
+
+Purpose:
+- Enables preliminary costing models
+- Finance can run margin analysis
+- BOM structure established for Planning review
+- No procurement risk (generic parts not orderable)
+
+Question for You: Can we define a golden parts library that covers 80% of our standard formats? Who should validate this library (PD, QA, Planning)?
+
+PHASE 3: CHILD TICKET 2 - ROUTING & WORK CENTER
+Owner: TBD (historically unclear ownership)
+Timing: When production line is determined
+Action: Create dummy routing tied to equipment
+
+Routing Components:
+- Production Line (Line 3, Line 5, etc.)
+- Work Center (mixing, filling, packaging)
+- Setup Time (generic estimate)
+- Run Rate (generic capacity estimate)
+- Labor Category (crew size standard)
+
+Purpose:
+- Enables cost allocation simulation
+- Production can validate equipment feasibility
+- Planning can assess capacity impact
+
+Question for You: 
+1. Who currently manages routing data creation (QA, Planning, Industrial Engineering)?
+2. Do you see routing as part of Master Control scope or separate workflow?
+3. Can we tie routing creation to equipment qualification in Master Control?
+
+PHASE 4: CHILD TICKET 3 - PLANT EXTENSION & MRP VIEWS
+Owner: Master Data + Planning input
+Timing: When production location confirmed
+Action: Extend material to plant(s) and configure MRP
+
+MRP Configuration:
+- MRP Type (PD for production)
+- Lot Size (standard run quantity)
+- Reorder Point (if applicable)
+- Lead Time (manufacturing + QA hold)
+- Safety Stock (if required)
+- Procurement Type (In-house production)
+
+Critical Decision: 
+If product will be produced at multiple sites (Irvine + Windsor), extend from day 1. Retroactive extension requires rework and delays.
+
+Purpose:
+- Material visible to Planning systems
+- MRP can calculate requirements
+- Demand visibility established
+
+PHASE 5: PILOT RUN DECISION GATE
+Decision Point: R&D Pilot (non-GMP) vs GMP Pilot
+
+Path A - R&D Pilot (Small Scale):
+- Use generic BOM as-is
+- Run test batch
+- Collect learnings
+- BOM remains generic
+
+Path B - GMP Pilot (Large Scale):
+- Update BOM with real components (Child Ticket 4)
+- Replace generic parts with actual materials
+- Update quantities to real formulation
+- Validate routing parameters
+
+BOM Update Mechanism:
+If no transactions on generic components, we can:
+- Substitute BOM lines (replace generic with real component)
+- Update quantities to actual formulation
+- Maintain same material number (no new FERT creation)
+
+Question for You: How do we control BOM change approval through Master Control? Is there a BOM revision workflow that tracks generic → real transition?
+
+PHASE 6: CHILD TICKET 4 - FINAL BOM & ROUTING UPDATE
+Owner: PD (formulation) + Master Data (execution)
+Timing: Post-pilot run, pre-production
+Action: Replace placeholder BOM with production BOM
+
+Validation Gates:
+- PD confirms final formulation
+- QA approves component specifications
+- Procurement confirms component availability
+- Planning validates quantities and yields
+
+Purpose:
+- Production-ready BOM established
+- Real costing replaces estimates
+- Procurement can place orders
+
+PHASE 7: QA REVIEW & APPROVAL
+Owner: QA (Anthony's team)
+Timing: Post-GMP pilot completion
+Action: Validate production readiness
+
+QA Approval Checklist:
+- BOM matches approved formulation
+- Routing matches production process
+- Labels approved and loaded
+- Specifications entered in system
+- Test results meet acceptance criteria
+- Stability data acceptable (if required)
+
+This is IDENTICAL to current QA gate - no process change.
+
+Purpose: Quality gate maintained, ensures production readiness
+
+PHASE 8: SALES & DISTRIBUTION SETUP
+Owner: Sales Ops (Rosa) + Master Data
+Timing: When sales channel determined
+Action: Extend material to distribution channels
+
+Sales Configuration per Channel:
+- Customer-specific setup (Costco, Amazon, DTC, etc.)
+- Pricing conditions
+- MOQ (minimum order quantity)
+- Lead times
+- Shipping requirements
+
+Important: Costing must be completed PER CHANNEL before extension. Each channel may have different cost structures (co-packing, distributor margins, etc.)
+
+Question: Do we create separate Child Ticket per channel or batch them?
+
+PHASE 9: FINAL COSTING VALIDATION & ACTIVATION
+Owner: Finance + Master Data
+Timing: All prior phases complete
+Action: Lock costing and remove material blocks
+
+Final Validation:
+- BOM quantities match QA-approved formulation
+- Routing matches production process
+- All costs allocated correctly
+- Material Status change: ND → PD (Production Deliverable)
+- Remove commercial blocks
+- MRP activation
+
+Deliverable: Material live and orderable
+
+---
+
+BENEFITS QUANTIFICATION:
+
+Time Savings:
+- Current: All data required at once = 2-4 week delay waiting for complete info
+- Proposed: Phased approach = material in system 4-6 weeks earlier
+- Costing analysis moves from post-pilot to pre-pilot = 1-2 week decision advantage
+
+Efficiency Gains:
+- Master Data workload spread across project timeline (no bottleneck)
+- Finance can model costs earlier in development cycle
+- Planning visibility improves demand forecast accuracy
+- Sales can quote earlier with preliminary costs
+
+Risk Reduction:
+- Prevents creating materials that fail E2D approval
+- Catches BOM/routing issues before production
+- Reduces "emergency material creation" scenarios
+- Improves data quality through progressive validation
+
+Resource Allocation:
+- Current: 1-2 hours per material (all at once, high pressure)
+- Proposed: 2-3 hours per material (phased, lower pressure, better quality)
+- Net benefit: Better data quality, fewer rework cycles
+
+Go-to-Market Impact:
+- Earlier costing visibility = better pricing decisions
+- Earlier system presence = better supply chain coordination
+- Earlier planning visibility = better capacity management
+
+Question for You: Once we pilot this with 3-5 products, can we quantify actual time savings for leadership presentation?
+
+---
+
+MASTER CONTROL INTEGRATION QUESTIONS:
+
+1. **Ticket Hierarchy Feasibility:**
+   - Can Master Control handle 1 Master Ticket + 6-8 Child Tickets?
+   - How do we maintain ticket relationships across departments?
+   - Can we flag Master Ticket "Ready" without closing it?
+
+2. **Change Control Workflow:**
+   - How do we manage BOM revisions (generic → real)?
+   - What approval workflow for component substitutions?
+   - Can we track BOM version history?
+
+3. **Cross-Functional Routing:**
+   - Child tickets route to: PD, QA, Planning, Sales, Finance
+   - Each department adds data, passes to next
+   - How do we configure routing logic?
+
+4. **Data Input Mechanisms:**
+   - Can we create fillable forms per ticket type?
+   - Can we pull data from other systems (e.g., formulation from E2D project)?
+   - How do we validate required fields before ticket closure?
+
+5. **Reporting & Visibility:**
+   - Can we create dashboard showing material progress through phases?
+   - Can leadership see: materials in phase, bottlenecks, cycle times?
+   - Can we track KPIs: time per phase, rework rate, completion rate?
+
+6. **Integration with Other Tools:**
+   - Does Master Control integrate with SAP for status updates?
+   - Can we link to Wrike projects for context?
+   - Can we attach E2D approval documentation automatically?
+
+---
+
+COMPARISON TO CURRENT STATE:
+
+| Current Process | Progressive Model |
+|----------------|-------------------|
+| Create material after ALL data available | Create material with minimal data, enrich progressively |
+| 2-4 week wait for complete info | Material exists in days, data added over weeks |
+| Bottleneck at end of project | Work distributed across project timeline |
+| No early costing analysis | Costing models run before pilot |
+| No planning visibility | MRP sees incoming products earlier |
+| Rush creates errors | Phased approach improves quality |
+| Same effort, compressed timeline | Same effort, spread over timeline |
+
+Key Insight: We're NOT adding work - we're redistributing WHEN work happens to align with natural project flow.
+
+---
+
+COMPARISON TO CANADA:
+
+Canada Approach:
+- Wait until E2D fully approved
+- Create material with complete data set
+- All-at-once material setup
+- Works for their volume and timing
+
+US Reality:
+- Higher innovation velocity (similar volume but faster pace)
+- Incomplete data at E2D approval (design evolution)
+- Need for early costing visibility (margin pressure)
+- Brittany's feedback: current process causes delays
+
+Both valid - different operational contexts require different solutions.
+
+---
+
+OPEN RISKS & MITIGATION:
+
+Risk 1: Generic BOM creates confusion
+- Mitigation: Clear naming (ASH-BULK-GEN vs real component)
+- Clear material status: ND = not orderable
+- Training: everyone understands placeholder concept
+
+Risk 2: Change control becomes complex
+- Mitigation: Master Control workflow manages transitions
+- Approval gates at each phase
+- Clear documentation of changes
+
+Risk 3: John (VP) not bought in yet
+- Mitigation: Pilot with 3-5 products, demonstrate value
+- Quantify time savings
+- Show early costing benefit with Finance support
+
+Risk 4: Departments not ready for phased input
+- Mitigation: Training and change management
+- Clear RACI per phase
+- Department champions identified
+
+Risk 5: Master Control may not support workflow
+- Mitigation: Wrike as backup option (Canada adopting January)
+- Evaluate both platforms
+- Decision needed by [DATE]
+
+---
+
+NEXT STEPS:
+
+1. **Your Input Needed:**
+   - Review this workflow and identify gaps
+   - Confirm Master Control feasibility for ticket hierarchy
+   - Define change control workflow for BOM updates
+   - Identify QA touchpoints in each phase
+
+2. **Workshop Session Request:**
+   - 60-90 minutes to walk through workflow
+   - Map Master Control capabilities to requirements
+   - Identify integration points with QA systems
+   - Define pilot product candidates
+
+3. **Golden Parts Library:**
+   - Schedule session with PD (Sihui) to define generic components
+   - Validate with Planning (Lily) for costing standards
+   - Create library in SAP (Master Data execution)
+
+4. **Pilot Definition:**
+   - Identify 3-5 upcoming projects to test workflow
+   - Define success metrics
+   - Establish measurement baseline
+   - Plan for iteration based on learnings
+
+5. **Leadership Presentation:**
+   - After pilot, present results to John and steering committee
+   - Quantified benefits (time, cost, quality)
+   - Recommendation: scale or adjust
+
+---
+
+URGENCY & TIMELINE:
+
+Why Now:
+- SAP implementation timeline: Technical Go-Live Aug 1, 2026
+- Need material creation process defined before Blueprint phase (Aug-Nov 2025)
+- Current xTuple process must evolve for SAP requirements
+- Canada lessons learned: start with process clarity, not system urgency
+
+Proposed Timeline:
+- This Week: Your review and feedback
+- Next Week: Workshop session (60-90 min)
+- Following Week: Document revised workflow
+- Month 1: Pilot with first product
+- Month 2-3: Iterate and refine
+- Month 4: Present to leadership for scale decision
+
+---
+
+I know this is detailed, but I want to ensure we're aligned on vision, execution, and integration points. This represents a significant operational shift, but one that positions us for SAP success and improved efficiency.
+
+Can we schedule 90 minutes next week to walk through this together? I'd like your perspective on Master Control feasibility and QA integration points.
+
+Let me know your availability.
+
+Juan Carlos Ribot-Guzman
+Manager, Master Data
+Nutrawise (Jamieson Wellness USA)

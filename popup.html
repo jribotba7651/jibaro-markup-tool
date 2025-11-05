@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jibaro Markup Cleaner</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1>Jibaro Markup Cleaner</h1>
+                <p class="subtitle">Clean text from markup instantly</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button id="cleanSelectedBtn" class="btn btn-primary" title="Clean text that's selected on the page">
+                <span class="icon">✂️</span>
+                Clean Selected Text
+            </button>
+        </div>
+
+        <!-- Options -->
+        <div class="options">
+            <h3>Cleaning Options</h3>
+            <div class="option-item">
+                <input type="checkbox" id="removeHtml" checked>
+                <label for="removeHtml">Remove HTML tags</label>
+            </div>
+            <div class="option-item">
+                <input type="checkbox" id="removeMarkdown" checked>
+                <label for="removeMarkdown">Remove Markdown</label>
+            </div>
+            <div class="option-item">
+                <input type="checkbox" id="removeCitations" checked>
+                <label for="removeCitations">Remove citations</label>
+            </div>
+            <div class="option-item">
+                <input type="checkbox" id="normalizeWhitespace" checked>
+                <label for="normalizeWhitespace">Normalize whitespace</label>
+            </div>
+        </div>
+
+        <!-- Format Options -->
+        <div class="options preserve-options">
+            <h3>Format Options</h3>
+            <div class="option-item">
+                <input type="checkbox" id="convertTables" checked>
+                <label for="convertTables">Convert tables to gridlines</label>
+            </div>
+        </div>
+
+        <!-- Manual Input Section -->
+        <div class="manual-section">
+            <label for="inputText">Or paste text here:</label>
+            <textarea id="inputText" placeholder="Paste your marked-up text here..."></textarea>
+
+            <div class="button-group">
+                <button id="cleanManualBtn" class="btn btn-secondary">Clean Text</button>
+                <button id="clearBtn" class="btn btn-outline">Clear</button>
+            </div>
+        </div>
+
+        <!-- Output Section -->
+        <div class="output-section" id="outputSection" style="display: none;">
+            <label for="outputText">
+                Cleaned text:
+                <span class="char-count" id="charCount"></span>
+            </label>
+            <textarea id="outputText" readonly></textarea>
+
+            <div class="button-group">
+                <button id="copyBtn" class="btn btn-success">
+                    <span class="icon">📋</span>
+                    Copy to Clipboard
+                </button>
+                <button id="replaceBtn" class="btn btn-secondary" title="Replace selected text on page with cleaned version">
+                    <span class="icon">🔄</span>
+                    Replace on Page
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <span>created by <strong>jibaroenlaluna</strong></span>
+            <a href="#" id="aboutLink">About</a>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
