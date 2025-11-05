@@ -1,8 +1,18 @@
-# 🇵🇷 Jibaro Markup Cleaner - Chrome Extension
+<div align="center">
 
-Una extensión de Chrome poderosa para limpiar HTML, Markdown, citaciones y otros tipos de markup de cualquier texto.
+# 🇵🇷 Jibaro Markup Cleaner
 
-**Creado por jibaroenlaluna**
+### Chrome Extension para limpiar HTML, Markdown y markup de cualquier texto
+
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/jribotba7651/jibaro-markup-tool)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Chrome](https://img.shields.io/badge/Chrome-Extension-yellow.svg)](https://www.google.com/chrome/)
+
+**Creado por jibaroenlaluna** 🇵🇷
+
+[Características](#-características) • [Instalación](#-instalación) • [Uso](#-cómo-usar) • [Ejemplos](#-ejemplos) • [Contribuir](#-contribuir)
+
+</div>
 
 ---
 
@@ -22,26 +32,31 @@ Una extensión de Chrome poderosa para limpiar HTML, Markdown, citaciones y otro
 
 ## 📦 Instalación
 
-### Método 1: Instalación Manual (Desarrollo)
+### Opción 1: Instalación desde GitHub (Recomendado)
 
-1. **Descarga la extensión**
-   - Todos los archivos están en la carpeta `jibaro-chrome-extension`
+```bash
+# Clona el repositorio
+git clone https://github.com/jribotba7651/jibaro-markup-tool.git
 
-2. **Genera los iconos**
-   - Abre el archivo `icons/create-icons.html` en tu navegador
-   - Click en "Generate Icons"
-   - Click en "Download All Icons"
-   - Guarda los archivos como `icon16.png`, `icon32.png`, `icon48.png`, `icon128.png`
-   - Colócalos en la carpeta `/icons/`
+# Entra a la carpeta
+cd jibaro-markup-tool
+```
 
-3. **Instala en Chrome**
-   - Abre Chrome y ve a `chrome://extensions/`
-   - Activa el "Modo de desarrollador" (Developer mode) en la esquina superior derecha
-   - Click en "Cargar extensión sin empaquetar" (Load unpacked)
-   - Selecciona la carpeta `jibaro-chrome-extension`
-   - ¡Listo! Verás el icono de Jibaro en tu barra de herramientas
+Luego instala en Chrome:
+1. Abre Chrome y ve a `chrome://extensions/`
+2. Activa el **"Modo de desarrollador"** (Developer mode) en la esquina superior derecha
+3. Click en **"Cargar extensión sin empaquetar"** (Load unpacked)
+4. Selecciona la carpeta `jibaro-markup-tool`
+5. ¡Listo! Verás el icono de Jibaro 🇵🇷 en tu barra de herramientas
 
-### Método 2: Chrome Web Store (Próximamente)
+### Opción 2: Descarga directa
+
+1. Ve a [Releases](https://github.com/jribotba7651/jibaro-markup-tool/releases)
+2. Descarga el archivo `.zip` de la última versión
+3. Descomprime el archivo
+4. Sigue los pasos 1-5 de la Opción 1
+
+### Opción 3: Chrome Web Store (Próximamente)
 *La extensión estará disponible en el Chrome Web Store pronto.*
 
 ---
@@ -227,20 +242,58 @@ La extensión requiere los siguientes permisos:
 
 ## 👨‍💻 Desarrollo
 
-### Probar localmente
+### Configuración local
 ```bash
-# 1. Clona o descarga los archivos
-# 2. Abre Chrome y ve a chrome://extensions/
-# 3. Activa "Modo de desarrollador"
-# 4. Click en "Cargar extensión sin empaquetar"
-# 5. Selecciona la carpeta jibaro-chrome-extension
+# Clona el repositorio
+git clone https://github.com/jribotba7651/jibaro-markup-tool.git
+cd jibaro-markup-tool
+
+# Carga la extensión en Chrome
+# 1. Abre chrome://extensions/
+# 2. Activa "Modo de desarrollador"
+# 3. Click en "Cargar extensión sin empaquetar"
+# 4. Selecciona esta carpeta
 ```
 
 ### Hacer cambios
-1. Edita los archivos según necesites
+1. Edita los archivos que necesites
 2. Ve a `chrome://extensions/`
-3. Click en el botón de "Reload" en la extensión
+3. Click en el ícono de **reload** (⟳) en la extensión
 4. Prueba los cambios
+
+### Contribuir cambios
+```bash
+# Crea una rama para tu feature
+git checkout -b mi-nueva-feature
+
+# Haz tus cambios y commit
+git add .
+git commit -m "Descripción de los cambios"
+
+# Push a tu fork
+git push origin mi-nueva-feature
+
+# Crea un Pull Request en GitHub
+```
+
+---
+
+## 🤝 Contribuir
+
+¡Las contribuciones son bienvenidas! Si quieres mejorar la extensión:
+
+1. **Fork** el proyecto
+2. Crea una **rama** para tu feature (`git checkout -b feature/AmazingFeature`)
+3. **Commit** tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un **Pull Request**
+
+### Ideas para contribuir
+- 🐛 Reportar bugs
+- ✨ Sugerir nuevas características
+- 📝 Mejorar la documentación
+- 🌍 Agregar traducciones
+- 🎨 Mejorar el diseño
 
 ---
 
@@ -250,31 +303,36 @@ Este proyecto es de código abierto para uso personal y educativo.
 
 ---
 
-## 🙏 Créditos
-
-**Creado por jibaroenlaluna**
-
-Inspirado en la necesidad de limpiar texto rápidamente sin perder la estructura.
-
-Colores basados en la bandera de Puerto Rico 🇵🇷
-
----
-
 ## 📧 Contacto y Soporte
 
 Si encuentras algún bug o tienes sugerencias:
-- Reporta issues
-- Envía feedback
-- Comparte con otros Jíbaros
+
+- 🐛 [Reporta un issue](https://github.com/jribotba7651/jibaro-markup-tool/issues)
+- 💡 [Sugiere una feature](https://github.com/jribotba7651/jibaro-markup-tool/issues/new)
+- ⭐ Dale una estrella al proyecto si te gusta
 
 ---
+
+## 🙏 Créditos
+
+**Creado por [jibaroenlaluna](https://github.com/jribotba7651)** 🇵🇷
+
+Inspirado en la necesidad de limpiar texto rápidamente sin perder la estructura.
+
+Colores basados en la bandera de Puerto Rico.
+
+---
+
+<div align="center">
 
 ## 🎉 ¡Disfruta!
 
-Espero que esta herramienta te sea útil para limpiar texto rápidamente.
-
 **¡Wepa!** 🇵🇷
+
+*Made with ❤️ in Puerto Rico*
 
 ---
 
-*Made with ❤️ in Puerto Rico*
+⭐ Si te gusta este proyecto, dale una estrella en [GitHub](https://github.com/jribotba7651/jibaro-markup-tool)
+
+</div>
