@@ -2,6 +2,7 @@
 const inputText = document.getElementById('inputText');
 const outputText = document.getElementById('outputText');
 const outputSection = document.getElementById('outputSection');
+const visualPreview = document.getElementById('visualPreview');
 const cleanSelectedBtn = document.getElementById('cleanSelectedBtn');
 const cleanManualBtn = document.getElementById('cleanManualBtn');
 const clearBtn = document.getElementById('clearBtn');
@@ -10,40 +11,7 @@ const replaceBtn = document.getElementById('replaceBtn');
 const charCount = document.getElementById('charCount');
 const statusMessage = document.getElementById('statusMessage');
 
-// Checkbox elements
-const removeHtml = document.getElementById('removeHtml');
-const removeMarkdown = document.getElementById('removeMarkdown');
-const removeCitations = document.getElementById('removeCitations');
-const normalizeWhitespace = document.getElementById('normalizeWhitespace');
-const convertTables = document.getElementById('convertTables');
-
-// Load saved options
-chrome.storage.sync.get({
-    removeHtml: true,
-    removeMarkdown: true,
-    removeCitations: true,
-    normalizeWhitespace: true,
-    convertTables: true
-}, (items) => {
-    removeHtml.checked = items.removeHtml;
-    removeMarkdown.checked = items.removeMarkdown;
-    removeCitations.checked = items.removeCitations;
-    normalizeWhitespace.checked = items.normalizeWhitespace;
-    convertTables.checked = items.convertTables;
-});
-
-// Save options when changed
-[removeHtml, removeMarkdown, removeCitations, normalizeWhitespace, convertTables].forEach(checkbox => {
-    checkbox.addEventListener('change', () => {
-        chrome.storage.sync.set({
-            removeHtml: removeHtml.checked,
-            removeMarkdown: removeMarkdown.checked,
-            removeCitations: removeCitations.checked,
-            normalizeWhitespace: normalizeWhitespace.checked,
-            convertTables: convertTables.checked
-        });
-    });
-});
+// No options needed anymore - we always convert markdown to HTML
 
 // Show status message
 function showStatus(message, type = 'success', duration = 3000) {
@@ -60,261 +28,377 @@ function updateCharCount() {
     charCount.textContent = `${count} characters`;
 }
 
-// Clean HTML tags - ALWAYS preserve bold and lists
-function cleanHtmlTags(text) {
-    if (!removeHtml.checked) return text;
+// Convert text to HTML - keep HTML tags, convert markdown to HTML
+function convertToHtml(text) {
+    // First, escape any existing HTML to prevent injection
+    // But check if text already contains HTML tags - if so, preserve them
+    const hasHtmlTags = /<[^>]+>/.test(text);
 
-    // ALWAYS convert <b>, <strong> to **
-    text = text.replace(/<(b|strong)>(.*?)<\/(b|strong)>/gi, '**$2**');
-
-    // ALWAYS convert <li> to bullets
-    text = text.replace(/<li>(.*?)<\/li>/gi, '• $1\n');
-    text = text.replace(/<ul>|<\/ul>|<ol>|<\/ol>/gi, '');
-
-    // Remove all other HTML tags
-    text = text.replace(/<[^>]*>/g, '');
-
-    // Decode HTML entities
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = text;
-    text = textarea.value;
+    if (!hasHtmlTags) {
+        // No HTML tags, so this is plain text or markdown - convert markdown to HTML
+        text = convertMarkdownToHtml(text);
+    }
 
     return text;
 }
 
-// Clean Markdown formatting - ALWAYS preserve ** and bullets, keep ---
-function cleanMarkdownFormat(text) {
-    if (!removeMarkdown.checked) return text;
+// Convert Markdown to HTML
+function convertMarkdownToHtml(text) {
+    // Split into lines for processing
+    let lines = text.split('\n');
+    let html = '';
+    let inList = false;
+    let inOrderedList = false;
+    let inTable = false;
+    let tableHeaders = [];
+    let paragraphBuffer = []; // Buffer to accumulate paragraph lines
+    let i = 0;
 
-    // Remove headers (# symbols) but keep the text
-    text = text.replace(/^#{1,6}\s+/gm, '');
+    // Helper function to flush paragraph buffer
+    function flushParagraph() {
+        if (paragraphBuffer.length > 0) {
+            // Join lines with <br> tags to preserve line breaks within paragraph
+            html += `<p>${paragraphBuffer.join('<br>\n')}</p>\n`;
+            paragraphBuffer = [];
+        }
+    }
 
-    // ALWAYS normalize all bold variations to **text** format
-    text = text.replace(/\*\*\*(.+?)\*\*\*/g, '**$1**'); // *** to **
-    text = text.replace(/___(.+?)___/g, '**$1**'); // ___ to **
-    text = text.replace(/__(.+?)__/g, '**$1**'); // __ to **
-    // ** stays as **
+    while (i < lines.length) {
+        let line = lines[i];
+        let trimmedLine = line.trim();
 
-    // Remove italic (single * or _) but preserve bold
-    text = text.replace(/([^\*])\*([^\*]+?)\*([^\*])/g, '$1$2$3');
-    text = text.replace(/([^_])_([^_]+?)_([^_])/g, '$1$2$3');
+        // Empty line - flush paragraph buffer and add spacing
+        if (trimmedLine === '') {
+            flushParagraph();
+            if (inList) {
+                html += '</ul>\n';
+                inList = false;
+            }
+            if (inOrderedList) {
+                html += '</ol>\n';
+                inOrderedList = false;
+            }
+            html += '<p></p>\n'; // Empty paragraph for spacing
+            i++;
+            continue;
+        }
 
-    // Remove links but keep text
-    text = text.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+        // Headers (# ## ### etc)
+        const headerMatch = trimmedLine.match(/^(#{1,6})\s+(.+)$/);
+        if (headerMatch) {
+            flushParagraph(); // Flush any pending paragraph
+            if (inList) {
+                html += '</ul>\n';
+                inList = false;
+            }
+            if (inOrderedList) {
+                html += '</ol>\n';
+                inOrderedList = false;
+            }
+            const level = headerMatch[1].length;
+            const headerText = processInlineMarkdown(headerMatch[2]);
+            html += `<h${level}>${headerText}</h${level}>\n`;
+            i++;
+            continue;
+        }
 
-    // Remove images
-    text = text.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1');
+        // Horizontal rule (---, ***, ___)
+        if (/^([-*_]){3,}$/.test(trimmedLine)) {
+            flushParagraph(); // Flush any pending paragraph
+            if (inList) {
+                html += '</ul>\n';
+                inList = false;
+            }
+            if (inOrderedList) {
+                html += '</ol>\n';
+                inOrderedList = false;
+            }
+            html += '<hr>\n';
+            i++;
+            continue;
+        }
 
-    // Remove code blocks and inline code
-    text = text.replace(/```[\s\S]*?```/g, '');
-    text = text.replace(/`([^`]+)`/g, '$1');
+        // Tables (| col1 | col2 |)
+        if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
+            if (!inTable && i + 1 < lines.length && lines[i + 1].includes('|') && lines[i + 1].includes('-')) {
+                // This is a table header
+                flushParagraph(); // Flush any pending paragraph
+                inTable = true;
+                tableHeaders = trimmedLine.split('|').map(h => h.trim()).filter(h => h);
+                html += '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">\n';
+                html += '<thead><tr>';
+                tableHeaders.forEach(header => {
+                    html += `<th style="background-color: #f0f0f0; padding: 8px; border: 1px solid #ddd;">${processInlineMarkdown(header)}</th>`;
+                });
+                html += '</tr></thead>\n<tbody>\n';
+                i += 2; // Skip header and separator line
+                continue;
+            } else if (inTable) {
+                // This is a table row
+                const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c);
+                html += '<tr>';
+                cells.forEach(cell => {
+                    html += `<td style="padding: 8px; border: 1px solid #ddd;">${processInlineMarkdown(cell)}</td>`;
+                });
+                html += '</tr>\n';
+                i++;
+                continue;
+            }
+        } else if (inTable) {
+            // End of table
+            html += '</tbody></table>\n';
+            inTable = false;
+        }
 
-    // KEEP horizontal rules (--- separators) - DON'T remove them
-    // text = text.replace(/^(-{3,}|_{3,}|\*{3,})$/gm, ''); // COMMENTED OUT
+        // Unordered lists (-, *, +)
+        const ulMatch = trimmedLine.match(/^[\-\*\+]\s+(.+)$/);
+        if (ulMatch) {
+            flushParagraph(); // Flush any pending paragraph
+            if (inOrderedList) {
+                html += '</ol>\n';
+                inOrderedList = false;
+            }
+            if (!inList) {
+                html += '<ul>\n';
+                inList = true;
+            }
+            html += `<li>${processInlineMarkdown(ulMatch[1])}</li>\n`;
+            i++;
+            continue;
+        }
 
-    // Remove blockquotes
-    text = text.replace(/^>\s+/gm, '');
+        // Ordered lists (1. 2. 3.)
+        const olMatch = trimmedLine.match(/^\d+\.\s+(.+)$/);
+        if (olMatch) {
+            flushParagraph(); // Flush any pending paragraph
+            if (inList) {
+                html += '</ul>\n';
+                inList = false;
+            }
+            if (!inOrderedList) {
+                html += '<ol>\n';
+                inOrderedList = true;
+            }
+            html += `<li>${processInlineMarkdown(olMatch[1])}</li>\n`;
+            i++;
+            continue;
+        }
 
-    // ALWAYS convert list markers to bullets
-    text = text.replace(/^[\*\-\+]\s+/gm, '• ');
-    text = text.replace(/^\d+\.\s+/gm, '• ');
+        // Regular paragraph - add to buffer instead of creating immediately
+        if (inList) {
+            html += '</ul>\n';
+            inList = false;
+        }
+        if (inOrderedList) {
+            html += '</ol>\n';
+            inOrderedList = false;
+        }
+        // Add line to paragraph buffer
+        paragraphBuffer.push(processInlineMarkdown(trimmedLine));
+        i++;
+    }
+
+    // Flush any remaining paragraph
+    flushParagraph();
+
+    // Close any open lists
+    if (inList) html += '</ul>\n';
+    if (inOrderedList) html += '</ol>\n';
+    if (inTable) html += '</tbody></table>\n';
+
+    return html;
+}
+
+// Process inline markdown (bold, italic, links, etc.)
+function processInlineMarkdown(text) {
+    // Bold and italic combined (***text*** or ___text___)
+    text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    text = text.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+
+    // Bold (**text** or __text__)
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+    // Italic (*text* or _text_)
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    text = text.replace(/_(.+?)_/g, '<em>$1</em>');
+
+    // Links [text](url)
+    text = text.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>');
+
+    // Inline code `code`
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
 
     return text;
 }
 
-// Clean citations
-function cleanCitationsFormat(text) {
-    if (!removeCitations.checked) return text;
+// Main conversion function - convert to HTML
+let convertedHtml = ''; // Store the HTML version globally for clipboard
 
-    // Remove citations in brackets
-    text = text.replace(/\[\d+\]/g, '');
-    text = text.replace(/\[[^\]]*citation[^\]]*\]/gi, '');
-
-    // Remove superscript citations
-    text = text.replace(/\^?\[\d+\]/g, '');
-
-    // Remove parenthetical citations
-    text = text.replace(/\(\d{4}\)/g, '');
-    text = text.replace(/\([A-Z][a-z]+,?\s*\d{4}\)/g, '');
-
-    // Remove numbered superscripts
-    text = text.replace(/⁰|¹|²|³|⁴|⁵|⁶|⁷|⁸|⁹/g, '');
-
-    return text;
-}
-
-// Normalize whitespace - SIMPLE AND SAFE
-function cleanWhitespaceFormat(text) {
-    if (!normalizeWhitespace.checked) return text;
-
+function convertText(text) {
     // Normalize line endings
     text = text.replace(/\r\n/g, '\n');
     text = text.replace(/\r/g, '\n');
 
-    // Replace multiple spaces (but NOT line breaks) with single space
-    text = text.replace(/ {2,}/g, ' ');
+    // Convert to HTML
+    convertedHtml = convertToHtml(text);
 
-    // Replace excessive blank lines (3+ empty lines) with 2 empty lines
-    text = text.replace(/\n{4,}/g, '\n\n\n');
+    // Update visual preview with rendered HTML
+    visualPreview.innerHTML = convertedHtml;
 
-    // Remove trailing spaces from each line
-    text = text.split('\n').map(line => line.trimEnd()).join('\n');
-
-    // Remove leading/trailing whitespace from entire text
-    text = text.trim();
-
-    return text;
+    // Return HTML code for textarea
+    return convertedHtml;
 }
 
-// Convert Markdown tables to formatted text tables
-function convertMarkdownTables(text) {
-    // Find all markdown tables
-    const tableRegex = /\|.+\|[\r\n]+\|[-:\s|]+\|[\r\n]+((?:\|.+\|[\r\n]*)+)/g;
-
-    return text.replace(tableRegex, (match) => {
-        const lines = match.trim().split(/[\r\n]+/).filter(line => line.trim());
-
-        if (lines.length < 3) return match; // Not a valid table
-
-        // Parse header
-        const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
-
-        // Skip separator line (line 1)
-
-        // Parse data rows
-        const rows = [];
-        for (let i = 2; i < lines.length; i++) {
-            const cells = lines[i].split('|').map(c => c.trim()).filter(c => c);
-            if (cells.length > 0) {
-                rows.push(cells);
-            }
-        }
-
-        // Calculate column widths
-        const colWidths = headers.map((h, i) => {
-            let maxWidth = h.length;
-            rows.forEach(row => {
-                if (row[i] && row[i].length > maxWidth) {
-                    maxWidth = row[i].length;
-                }
-            });
-            return Math.min(maxWidth + 2, 50); // Max 50 chars per column
-        });
-
-        // Build formatted table
-        let result = '\n';
-
-        // Top border
-        result += '┌' + colWidths.map(w => '─'.repeat(w)).join('┬') + '┐\n';
-
-        // Header row
-        result += '│' + headers.map((h, i) => h.padEnd(colWidths[i])).join('│') + '│\n';
-
-        // Header separator
-        result += '├' + colWidths.map(w => '─'.repeat(w)).join('┼') + '┤\n';
-
-        // Data rows with gridlines between each row
-        rows.forEach((row, rowIndex) => {
-            result += '│';
-            for (let i = 0; i < headers.length; i++) {
-                const cell = row[i] || '';
-                result += cell.padEnd(colWidths[i]) + '│';
-            }
-            result += '\n';
-
-            // Add gridline between rows (except after last row)
-            if (rowIndex < rows.length - 1) {
-                result += '├' + colWidths.map(w => '─'.repeat(w)).join('┼') + '┤\n';
-            }
-        });
-
-        // Bottom border
-        result += '└' + colWidths.map(w => '─'.repeat(w)).join('┴') + '┘\n';
-
-        return result;
-    });
-}
-
-// Main cleaning function
-function cleanText(text) {
-    text = cleanHtmlTags(text);
-    text = cleanMarkdownFormat(text);
-    text = cleanCitationsFormat(text);
-
-    // Convert tables only if option is checked
-    if (convertTables.checked) {
-        text = convertMarkdownTables(text);
-    }
-
-    text = cleanWhitespaceFormat(text);
-    return text;
-}
-
-// Clean selected text from page
+// Convert selected text from page
 cleanSelectedBtn.addEventListener('click', async () => {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-        chrome.tabs.sendMessage(tab.id, { action: 'getSelectedText' }, (response) => {
-            if (chrome.runtime.lastError) {
-                showStatus('Error: Could not access page content', 'error');
-                return;
-            }
-
-            if (response && response.selectedText) {
-                const cleaned = cleanText(response.selectedText);
-                outputText.value = cleaned;
-                outputSection.style.display = 'block';
-                updateCharCount();
-                showStatus('Selected text cleaned successfully!', 'success');
-            } else {
-                showStatus('No text selected on page', 'info');
-            }
+        // Inject script to get selected text
+        const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => window.getSelection().toString()
         });
+
+        if (results && results[0] && results[0].result) {
+            const selectedText = results[0].result;
+            const converted = convertText(selectedText);
+            outputText.value = converted;
+            outputSection.style.display = 'block';
+            updateCharCount();
+            showStatus('✅ Converted! Preview below.', 'success');
+        } else {
+            showStatus('No text selected on page', 'info');
+        }
     } catch (error) {
+        console.error('Error:', error);
         showStatus('Error accessing page', 'error');
     }
 });
 
-// Clean manual input
+// Convert manual input
 cleanManualBtn.addEventListener('click', () => {
     const text = inputText.value.trim();
 
     if (!text) {
-        showStatus('Please enter some text to clean', 'info');
+        showStatus('Please enter some text to convert', 'info');
         return;
     }
 
-    const cleaned = cleanText(text);
-    outputText.value = cleaned;
+    const converted = convertText(text);
+    outputText.value = converted;
     outputSection.style.display = 'block';
     updateCharCount();
-    showStatus('Text cleaned successfully!', 'success');
+    showStatus('✅ Converted! Preview below.', 'success');
 });
 
 // Clear all
 clearBtn.addEventListener('click', () => {
     inputText.value = '';
     outputText.value = '';
+    visualPreview.innerHTML = '';
     outputSection.style.display = 'none';
     showStatus('Cleared', 'info', 1500);
 });
 
-// Copy to clipboard
+// Copy to clipboard with rich HTML formatting (like MassiveMark)
 copyBtn.addEventListener('click', async () => {
-    if (!outputText.value) {
+    if (!outputText.value || !convertedHtml) {
         showStatus('No text to copy', 'info');
         return;
     }
 
     try {
-        await navigator.clipboard.writeText(outputText.value);
-        showStatus('Copied to clipboard!', 'success', 2000);
+        // Create styled HTML that Word/Outlook will render properly
+        const styledHtml = `
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    body {
+        font-family: Calibri, Arial, sans-serif;
+        font-size: 11pt;
+        color: #000000;
+        line-height: 1.5;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+        border: 1px solid #000000;
+    }
+    th {
+        background-color: #4472C4;
+        color: #FFFFFF;
+        font-weight: bold;
+        padding: 8px;
+        border: 1px solid #000000;
+        text-align: left;
+    }
+    td {
+        padding: 8px;
+        border: 1px solid #000000;
+    }
+    h1 { font-size: 18pt; font-weight: bold; margin: 12pt 0 6pt 0; }
+    h2 { font-size: 16pt; font-weight: bold; margin: 10pt 0 6pt 0; }
+    h3 { font-size: 14pt; font-weight: bold; margin: 10pt 0 6pt 0; }
+    h4 { font-size: 12pt; font-weight: bold; margin: 8pt 0 4pt 0; }
+    h5 { font-size: 11pt; font-weight: bold; margin: 8pt 0 4pt 0; }
+    h6 { font-size: 11pt; font-weight: bold; margin: 8pt 0 4pt 0; }
+    p {
+        margin: 0 0 6pt 0;
+        line-height: 1.15;
+    }
+    p:empty {
+        margin: 6pt 0;
+        height: 6pt;
+    }
+    br {
+        display: block;
+        content: "";
+        margin: 0;
+    }
+    ul { margin: 10px 0; padding-left: 24px; list-style-type: disc; }
+    ol { margin: 10px 0; padding-left: 24px; }
+    li { margin: 3px 0; }
+    hr { border: none; border-top: 1px solid #000000; margin: 12pt 0; }
+    strong, b { font-weight: bold; }
+    em, i { font-style: italic; }
+    code {
+        background-color: #F2F2F2;
+        padding: 2px 4px;
+        font-family: 'Consolas', 'Courier New', monospace;
+        border: 1px solid #D0D0D0;
+        border-radius: 3px;
+    }
+</style>
+</head>
+<body>
+${convertedHtml}
+</body>
+</html>`;
+
+        // Copy both HTML and plain text to clipboard
+        const htmlBlob = new Blob([styledHtml], { type: 'text/html' });
+        const textBlob = new Blob([outputText.value], { type: 'text/plain' });
+
+        const clipboardItem = new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob
+        });
+
+        await navigator.clipboard.write([clipboardItem]);
+        showStatus('✅ Copied! Now paste into Word/Outlook.', 'success', 3000);
     } catch (error) {
-        // Fallback
-        outputText.select();
-        document.execCommand('copy');
-        showStatus('Copied to clipboard!', 'success', 2000);
+        console.error('Clipboard error:', error);
+        // Fallback to plain text
+        try {
+            await navigator.clipboard.writeText(outputText.value);
+            showStatus('⚠️ Copied as plain text (HTML copy failed)', 'info', 3000);
+        } catch (fallbackError) {
+            showStatus('❌ Could not copy to clipboard', 'error');
+        }
     }
 });
 
@@ -327,23 +411,67 @@ replaceBtn.addEventListener('click', async () => {
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const textToReplace = outputText.value;
 
-        chrome.tabs.sendMessage(tab.id, {
-            action: 'replaceSelectedText',
-            text: outputText.value
-        }, (response) => {
-            if (chrome.runtime.lastError) {
-                showStatus('Error: Could not replace text', 'error');
-                return;
-            }
+        // Inject script to replace selected text
+        const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: (newText) => {
+                try {
+                    const selection = window.getSelection();
+                    if (!selection.rangeCount) return false;
 
-            if (response && response.success) {
-                showStatus('Text replaced on page!', 'success');
-            } else {
-                showStatus('Could not replace text', 'error');
-            }
+                    const range = selection.getRangeAt(0);
+                    const activeElement = document.activeElement;
+                    const isEditable = activeElement && (
+                        activeElement.isContentEditable ||
+                        activeElement.tagName === 'TEXTAREA' ||
+                        activeElement.tagName === 'INPUT'
+                    );
+
+                    if (isEditable) {
+                        if (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT') {
+                            const start = activeElement.selectionStart;
+                            const end = activeElement.selectionEnd;
+                            const text = activeElement.value;
+                            activeElement.value = text.substring(0, start) + newText + text.substring(end);
+                            activeElement.selectionStart = activeElement.selectionEnd = start + newText.length;
+                            activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                        } else if (activeElement.isContentEditable) {
+                            range.deleteContents();
+                            const lines = newText.split('\n');
+                            const fragment = document.createDocumentFragment();
+                            lines.forEach((line, index) => {
+                                fragment.appendChild(document.createTextNode(line));
+                                if (index < lines.length - 1) {
+                                    fragment.appendChild(document.createElement('br'));
+                                }
+                            });
+                            range.insertNode(fragment);
+                            range.collapse(false);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        }
+                        return true;
+                    } else {
+                        navigator.clipboard.writeText(newText);
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Error replacing text:', error);
+                    return false;
+                }
+            },
+            args: [textToReplace]
         });
+
+        if (results && results[0] && results[0].result) {
+            showStatus('Text replaced on page!', 'success');
+        } else {
+            showStatus('Could not replace text', 'error');
+        }
     } catch (error) {
+        console.error('Error:', error);
         showStatus('Error replacing text', 'error');
     }
 });
@@ -351,22 +479,24 @@ replaceBtn.addEventListener('click', async () => {
 // About link
 document.getElementById('aboutLink').addEventListener('click', (e) => {
     e.preventDefault();
-    const aboutText = `Jibaro Markup Cleaner v1.0.0
+    const aboutText = `Jibaro Rich Text Converter v3.0.0
 
-A powerful tool to remove HTML, Markdown, citations, and other markup from text.
+Convert Markdown to rich HTML for Word/Outlook with beautiful formatting.
 
 Created by jibaroenlaluna
 
 Features:
-• Clean selected text from any webpage
-• Remove HTML tags and entities
-• Remove Markdown formatting
-• Remove citations and references
-• Normalize whitespace while preserving structure
-• Copy cleaned text to clipboard
-• Replace text directly on page
+• Convert Markdown to Rich HTML
+• Visual preview before copying
+• Copy with formatting to Word/Outlook
+• Support for bold, italic, headers, lists, tables
+• Professional table styling with blue headers
+• Perfect for Claude, ChatGPT, Gemini outputs
+• All processing done locally (private & secure)
 
-Puerto Rico 🇵🇷`;
+Made with ❤️ in Puerto Rico 🇵🇷
+
+GitHub: github.com/yourusername/jibaro-rich-text-converter`;
 
     alert(aboutText);
 });
